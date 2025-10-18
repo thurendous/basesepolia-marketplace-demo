@@ -1,0 +1,56 @@
+# Cloud Build configuration to build the Docker image with required build args,
+# push to Artifact Registry, and deploy to Cloud Run.
+
+substitutions:
+  _REGION: "asia-northeast1"           # change if needed
+  _SERVICE: "marketplace-base-sepolia-demo"  # Cloud Run service name
+  _REPO: "cloud-run-source-deploy/basesepolia-marketplace-demo" # AR repo path
+  # Provide these in the trigger (do NOT commit real values here):
+  # _NEXT_PUBLIC_TEMPLATE_CLIENT_ID: ""
+  # _NEXT_PUBLIC_MARKETPLACE_ADDRESS: ""
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  # Build image with build-args so Next.js has public env at build time
+  - name: gcr.io/cloud-builders/docker
+    id: Build image
+    args:
+      - build
+      - -t
+      - "$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_SERVICE:$COMMIT_SHA"
+      - --build-arg
+      - "NEXT_PUBLIC_TEMPLATE_CLIENT_ID=$_NEXT_PUBLIC_TEMPLATE_CLIENT_ID"
+      - --build-arg
+      - "NEXT_PUBLIC_MARKETPLACE_ADDRESS=$_NEXT_PUBLIC_MARKETPLACE_ADDRESS"
+      - .
+
+  # Push the image
+  - name: gcr.io/cloud-builders/docker
+    id: Push image
+    args:
+      - push
+      - "$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_SERVICE:$COMMIT_SHA"
+
+  # Deploy to Cloud Run
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: Deploy to Cloud Run
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "$_SERVICE"
+      - --image
+      - "$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_SERVICE:$COMMIT_SHA"
+      - --region
+      - "$_REGION"
+      - --quiet
+      # Keep runtime envs too (optional but convenient)
+      - --update-env-vars
+      - "NEXT_PUBLIC_TEMPLATE_CLIENT_ID=$_NEXT_PUBLIC_TEMPLATE_CLIENT_ID,NEXT_PUBLIC_MARKETPLACE_ADDRESS=$_NEXT_PUBLIC_MARKETPLACE_ADDRESS"
+
+images:
+  - "$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_SERVICE:$COMMIT_SHA"
+
+

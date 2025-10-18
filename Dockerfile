@@ -36,4 +36,3 @@ COPY --from=builder /app/public ./public
 
 # Cloud Run will set PORT, Next listens to it via start script
 CMD ["node", "server.js"]
-
