@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+Dockerfile
+*.log
+.env*
+.cache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store
+**/.DS_Store
+**/Thumbs.db
